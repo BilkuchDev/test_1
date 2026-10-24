@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ug" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Professional Geoportal & Workspace</title>
+
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- FontAwesome سىنبەلگىلەر -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+
+    <style>
+        :root {
+            --bg-primary: #121820;
+            --bg-secondary: #1a222d;
+            --accent-color: #00b4d8;
+            --text-light: #e0e6ed;
+            --text-dim: #94a3b8;
+            --border-color: #2e3a4e;
+            --sidebar-width: 320px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body, html {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            background-color: var(--bg-primary);
+            color: var(--text-light);
+        }
+
+        /* ئەپ كونتېينېرى */
+        .gis-container {
+            display: flex;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* يان تاختا (Sidebar) */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.4);
+        }
+
+        .sidebar-header {
+            padding: 18px 20px;
+            background: #141b24;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .sidebar-header i {
+            font-size: 1.5rem;
+            color: var(--accent-color);
+        }
+
+        .sidebar-header h2 {
+            font-size: 1.1rem;
+            letter-spacing: 0.5px;
+            font-weight: 600;
+        }
+
+        .sidebar-content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+        }
+
+        .section-title {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            margin: 15px 0 8px 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* قورال كۇنۇپكىلىرى */
+        .tool-group {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+
+        .tool-btn {
+            background: #242f3e;
+            border: 1px solid var(--border-color);
+            color: var(--text-light);
+            padding: 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            transition: all 0.2s ease;
+        }
+
+        .tool-btn:hover {
+            background: var(--accent-color);
+            color: #fff;
+            border-color: var(--accent-color);
+        }
+
+        /* قەۋەتلەر تىزىملىكى (Layer Management) */
+        .layer-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #212b38;
+            padding: 10px 12px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            border-left: 3px solid var(--accent-color);
+        }
+
+        .layer-item input[type="checkbox"] {
+            accent-color: var(--accent-color);
+            cursor: pointer;
+            width: 16px;
+            height: 16px;
+        }
+
+        /* خەرىتە رايونى */
+        .main-map-area {
+            flex: 1;
+            position: relative;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            background: #0b0e14;
+        }
+
+        /* ھالەت بالدىقى (Status Bar) */
+        .status-bar {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 28px;
+            background: rgba(20, 27, 36, 0.92);
+            backdrop-filter: blur(4px);
+            border-top: 1px solid var(--border-color);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            font-size: 0.75rem;
+            color: var(--text-dim);
+            font-family: monospace;
+        }
+
+        .coords-display {
+            color: #38bdf8;
+        }
+
+        /* Leaflet ئۇسلۇبلىرىنى ماسلاشتۇرۇش */
+        .leaflet-control-zoom {
+            border: none !important;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3) !important;
+        }
+        .leaflet-control-zoom a {
+            background-color: var(--bg-secondary) !important;
+            color: var(--text-light) !important;
+            border-color: var(--border-color) !important;
+        }
+        .leaflet-control-zoom a:hover {
+            background-color: var(--accent-color) !important;
+            color: #fff !important;
+        }
+    </style>
+</head>
+<body>
+
+<div class="gis-container">
+    <!-- يان تاختا (GIS Tools & Layer Tree) -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-earth-americas"></i>
+            <h2>GIS Workspace Pro</h2>
+        </div>
+
+        <div class="sidebar-content">
+            <!-- قوراللار -->
+            <div class="section-title">
+                <i class="fa-solid fa-toolbox"></i> Spatial Tools
+            </div>
+            <div class="tool-group">
+                <button class="tool-btn" onclick="locateUser()">
+                    <i class="fa-solid fa-location-crosshairs"></i> مېنىڭ ئورنۇم
+                </button>
+                <button class="tool-btn" onclick="resetExtent()">
+                    <i class="fa-solid fa-globe"></i> دەسلەپكى دائىرە
+                </button>
+                <button class="tool-btn" onclick="toggleMeasure()">
+                    <i class="fa-solid fa-ruler-combined"></i> ئارىلىق ئۆلچەش
+                </button>
+                <button class="tool-btn" onclick="exportCoordinates()">
+                    <i class="fa-solid fa-file-export"></i> چىقىرىش
+                </button>
+            </div>
+
+            <!-- ئاساسىي خەرىتە (Basemaps) -->
+            <div class="section-title">
+                <i class="fa-solid fa-layer-group"></i> ئاساسىي قەۋەت (Basemaps)
+            </div>
+            <div class="layer-item">
+                <label for="base-osm">OpenStreetMap (Vector)</label>
+                <input type="radio" id="base-osm" name="basemap" checked onchange="switchBasemap('osm')">
+            </div>
+            <div class="layer-item">
+                <label for="base-sat">سۈنئىي ھەمراھ (Esri Imagery)</label>
+                <input type="radio" id="base-sat" name="basemap" onchange="switchBasemap('sat')">
+            </div>
+            <div class="layer-item">
+                <label for="base-dark">قاراڭغۇ ھالەت (Carto Dark)</label>
+                <input type="radio" id="base-dark" name="basemap" onchange="switchBasemap('dark')">
+            </div>
+
+            <!-- سانلىق مەلۇمات قەۋەتلىرى (Overlays) -->
+            <div class="section-title">
+                <i class="fa-solid fa-database"></i> تەكشۈرۈش نۇقتىلىرى (Vector Layers)
+            </div>
+            <div class="layer-item">
+                <span><i class="fa-solid fa-location-dot" style="color: #ef4444; margin-right: 6px;"></i> ئەۋرىشكە نۇقتىلىرى</span>
+                <input type="checkbox" id="sample-points" checked onchange="toggleMarkers(this.checked)">
+            </div>
+        </div>
+    </aside>
+
+    <!-- ئاساسىي خەرىتە كۆرسىتىش رايونى -->
+    <main class="main-map-area">
+        <div id="map"></div>
+
+        <!-- ئاستى ھالەت ئۇچۇرى بالدىقى -->
+        <div class="status-bar">
+            <span>Projection: EPSG:4326 (WGS 84)</span>
+            <span>Zoom دەرىجىسى: <span id="zoom-level">4</span></span>
+            <span>نۇقتىلار: <span id="coords" class="coords-display">Lat: 0.000000 | Lon: 0.000000</span></span>
+        </div>
+    </main>
+</div>
+
+<!-- Leaflet JS كۇتۇپخانىسى -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    // 1. دەسلەپكى خەرىتە تەڭشىكى
+    const initialCenter = [41.714, 82.964]; // تارىم / شىنجاڭ ئەتراپى مەركەز قىلىندى
+    const initialZoom = 5;
+
+    const map = L.map('map', {
+        center: initialCenter,
+        zoom: initialZoom,
+        zoomControl: false // كۇنۇپكا ئورنىنى ئوڭ تەرەپكە يۆتكەيمىز
+    });
+
+    // Zoom كونترول كۇنۇپكىسىنى ئوڭ تەرەپ ئۈستىگە ئورۇنلاشتۇرۇش
+    L.control.zoom({ position: 'topright' }).addTo(map);
+
+    // 2. كۆپ خىل Basemap مەنبەلىرىنى قۇرۇش
+    const basemaps = {
+        osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }),
+        sat: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            maxZoom: 18,
+            attribution: '© Esri Satellite'
+        }),
+        dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 19,
+            attribution: '© CARTO'
+        })
+    };
+
+    // باشلىنىشتا OSM قەۋىتىنى قوشۇش
+    basemaps.osm.addTo(map);
+    let currentBasemap = 'osm';
+
+    // 3. Basemap ئالماشتۇرۇش فۇنكسىيەسى
+    function switchBasemap(type) {
+        if (currentBasemap === type) return;
+        map.removeLayer(basemaps[currentBasemap]);
+        basemaps[type].addTo(map);
+        currentBasemap = type;
+    }
+
+    // 4. ئەۋرىشكە نۇقتا (Vector Markers) قەۋىتى
+    const sampleLayer = L.layerGroup();
+
+    const sampleFeatures = [
+        { name: "تەكشۈرۈش پونكىتى A", coords: [43.8256, 87.6168], desc: "شەھەر كۆزىتىش سىستېمىسى" },
+        { name: "سۇ مەنبە نۇقتىسى B", coords: [39.4704, 75.9898], desc: "سۇ سۈپىتى كۆزىتىش ئەۋرىشكىسى" },
+        { name: "ھاۋا كۆزىتىش مەركىزى C", coords: [41.7275, 86.1746], desc: "ھاۋا كېلىمات ئۆلچەش ئەسۋابى" }
+    ];
+
+    sampleFeatures.forEach(item => {
+        const marker = L.marker(item.coords).bindPopup(`
+            <div style="font-family: inherit;">
+                <h4 style="color:#0077b6; margin-bottom: 5px;">${item.name}</h4>
+                <p style="font-size: 12px; color: #333;">${item.desc}</p>
+                <code style="font-size: 11px; color: #666;">كوردېنات: ${item.coords.join(', ')}</code>
+            </div>
+        `);
+        sampleLayer.addLayer(marker);
+    });
+
+    sampleLayer.addTo(map);
+
+    function toggleMarkers(visible) {
+        if (visible) {
+            map.addLayer(sampleLayer);
+        } else {
+            map.removeLayer(sampleLayer);
+        }
+    }
+
+    // 5. چاشقىنەك ھەرىكىتى ۋە كوئوردېناتنى نەق مەيداندا ئوقۇش
+    const coordsDisplay = document.getElementById('coords');
+    const zoomDisplay = document.getElementById('zoom-level');
+
+    map.on('mousemove', function (e) {
+        coordsDisplay.innerText = `Lat: ${e.latlng.lat.toFixed(6)} | Lon: ${e.latlng.lng.toFixed(6)}`;
+    });
+
+    map.on('zoomend', function () {
+        zoomDisplay.innerText = map.getZoom();
+    });
+
+    // 6. قوراللار فۇنكسىيەسى
+    function resetExtent() {
+        map.setView(initialCenter, initialZoom);
+    }
+
+    function locateUser() {
+        map.locate({ setView: true, maxZoom: 12 });
+    }
+
+    map.on('locationfound', function (e) {
+        L.circle(e.latlng, { radius: e.accuracy, color: '#00b4d8' }).addTo(map);
+        L.marker(e.latlng).addTo(map).bindPopup("سىزنىڭ نۆۋەتتىكى ئورنىڭىز").openPopup();
+    });
+
+    function toggleMeasure() {
+        alert("ئارىلىق ئۆلچەش پىروگرامما قىستۇرمىسى (Measure Tool) كېڭەيتىش ئۈچۈن قوزغىتىلدى.");
+    }
+
+    function exportCoordinates() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sampleFeatures, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", "gis_features.geojson");
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+</script>
+
+</body>
+</html>
